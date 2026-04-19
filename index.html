@@ -4,12 +4,14 @@
 <meta charset="UTF-8">
 <title>Hashzone.</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap" rel="stylesheet">
+
 <style>
 body {
-  background: black;
-  color: white;
-  font-family: Arial, Helvetica, sans-serif;
+  background: white;
+  color: black;
   margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 header {
@@ -19,19 +21,15 @@ header {
   text-align: center;
 }
 
-header .headline{
-  font-size: 32px;
-}
-
-.container {
-  display: flex;
+.headline {
+  font-size: clamp(20px, 4vw, 32px);
 }
 
 #tx {
-  width: 0px;
-  padding: 0px;
-  color: white;
-  font-size: 20px;
+  position: absolute;
+  left: 0;
+  width: clamp(180px, 20vw, 300px);
+  font-size: clamp(12px, 1.5vw, 20px);
 }
 
 .main {
@@ -44,47 +42,46 @@ header .headline{
 
 #grid {
   display: grid;
-  grid-template-columns: repeat(8, 70px);
-  gap: 20px;
-  margin: 0px;
+  grid-template-columns: repeat(8, 1fr);
+  width: min(68vw, 400px);
+  aspect-ratio: 1 / 1;
+  gap: 5px;
 }
 
 .cell {
-  text-align: center;
-  font-size: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(16px, 3vw, 34px);
+  font-family: 'Inter';
+  font-weight: 900;
 }
 
 #bottom {
   margin-top: 50px;
-  width: 1000px;
+  width: min(90vw, 1000px);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   text-align: center;
-  font-size: 24px;
+  font-size: clamp(16px, 2vw, 24px);
 }
 
 #timer {
   margin-top: 30px;
-  font-size: 24px;
-  color: white;
+  font-size: clamp(16px, 2.5vw, 24px);
 }
 
-.hex-0 { color: #666; }
-.hex-1 { color: #ff4da6; }
-.hex-2 { color: #b84dff; }
-.hex-3 { color: #3399ff; }
-.hex-4 { color: #33cc66; }
-.hex-5 { color: #99ff33; }
-.hex-6 { color: #ffcc00; }
-.hex-7 { color: #ff9933; }
-.hex-8 { color: #ff3333; }
-.hex-9 { color: #ff66aa; }
-.hex-A { color: #ff4da6; }
-.hex-B { color: #b84dff; }
-.hex-C { color: #3399ff; }
-.hex-D { color: #33cc66; }
-.hex-E { color: #99ff33; }
-.hex-F { color: #ffcc00; }
+.hex-0, .hex-1, .hex-2, .hex-3, .hex-4,
+.hex-5, .hex-6, .hex-7, .hex-8, .hex-9 {
+  color: black;
+}
+
+.hex-A { color: blue; }
+.hex-B { color: purple; }
+.hex-C { color: red; }
+.hex-D { color: orange; }
+.hex-E { color: gold; }
+.hex-F { color: green; }
 
 #tx h3 {
   margin-top: 0;
@@ -95,10 +92,45 @@ footer {
   height: 0px; 
   text-align: center;
   padding: 50px 0;
-  background-color: black;
+  background-color: white;
 }
 .footer-text {
-  color: white;
+  color: black;
+}
+
+@keyframes glitchColor {
+  0% {
+    text-shadow: 2px 0 red, -2px 0 cyan;
+    opacity: 1;
+  }
+  20% {
+  opacity: 0;
+  text-shadow: none;
+  }
+  40% {
+    text-shadow: 2px 0 blue, -2px 0 yellow;
+    opacity: 1;
+  }
+  60% {
+    text-shadow: -2px 0 magenta, 2px 0 lime;
+    opacity: 0.75;
+  }
+  80% {
+    text-shadow: 1px 0 black, -1px 0 black;
+    opacity: 0.9;
+  }
+  100% {
+    text-shadow: 0 0 0 transparent;
+    opacity: 1;
+  }
+}
+
+.glitch {
+  animation: glitchColor 0.25s ease;
+}
+
+#grid.glitch {
+  filter: contrast(2) brightness(1.2);
 }
 
 </style>
@@ -107,9 +139,7 @@ footer {
 <body>
 
 <header>
-  <h1 class="headline">
-    <a>Hashzone.</a>
-  </h1>
+  <h1 class="headline">Hashzone.</h1>
 </header>
 
 <div class="container">
@@ -135,6 +165,8 @@ footer {
 
 </div>
 
+<audio id="noise" src="tv-noise.mp3"></audio>
+
 <footer>
   	<p>Copyright © 2026 AsToRcHiCa Inc. All rights reserved.</p>
 </footer>
@@ -143,6 +175,15 @@ footer {
 
 let currentHash = ""
 let blockTime = 0
+let audioCtx = null
+
+document.body.addEventListener("click", () => {
+  const audio = document.getElementById("noise")
+  audio.play().then(() => {
+    audio.pause()
+    audio.currentTime = 0
+  }).catch(() => {})
+}, { once: true })
 
 async function loadBlock() {
   try {
@@ -156,17 +197,14 @@ async function loadBlock() {
     const block = await blockRes.json()
 
     renderGrid(hash)
-
-    document.body.style.background = "#111"
-    setTimeout(() => {
-      document.body.style.background = "black"
-    }, 150)
+    triggerGlitch()
+    playNoise()
 
     blockTime = block.timestamp
     const date = new Date(block.timestamp * 1000)
 
     document.getElementById("height").textContent =
-      "Block height: " + block.height
+      "Height: " + block.height
 
     document.getElementById("miner").textContent =
       "Miner: " + (block.extras?.pool?.name || "Unknown")
@@ -174,13 +212,24 @@ async function loadBlock() {
     document.getElementById("time").textContent =
       "Timestamp: " + date.toLocaleString()
 
+    const txRes = await fetch(`https://mempool.space/api/block/${hash}/txs`)
+    const txs = await txRes.json()
+
+    let totalFees = 0
+    txs.forEach(tx => totalFees += tx.fee)
+
+    totalFees = totalFees / 100000000
+
+    const diff = block.difficulty.toExponential(2)
+    const [base, exp] = diff.split("e+")
+
+    const diffFormatted = `${base} × 10<sup>${exp}</sup>`
+
     document.getElementById("txinfo").innerHTML =
-      "Count: " + block.tx_count + "<br>" + "<br>" +
-      "Size: " + block.size + "<br>" + "<br>" +
-      "Weight: " + block.weight + "<br>" + "<br>" +
-      "Version: " + block.version + "<br>" + "<br>" +
-      "Bits: " + block.bits + "<br>" + "<br>" +
-      "Difficulty: " + block.difficulty
+      "Total Fees: " + totalFees.toFixed(4) + " BTC<br><br>" +
+      "Count: " + block.tx_count + "<br><br>" +
+      "Size: " + block.size + "<br><br>" +
+      "Difficulty: " + diffFormatted
 
   } catch (e) {
     console.log(e)
@@ -215,6 +264,36 @@ function renderGrid(hash) {
 
     grid.appendChild(div)
   }
+}
+
+function triggerGlitch() {
+  const cells = document.querySelectorAll(".cell")
+
+  cells.forEach(cell => {
+    if (Math.random() > 0.15) {
+      cell.classList.add("glitch")
+    }
+  })
+
+  setTimeout(() => {
+    cells.forEach(cell => {
+      cell.classList.remove("glitch")
+    })
+  }, 300)
+
+  const grid = document.getElementById("grid")
+  
+  grid.classList.add("glitch")
+
+  setTimeout(() => {
+    grid.classList.remove("glitch")
+  }, 200)
+}
+
+function playNoise() {
+  const audio = document.getElementById("noise")
+  audio.currentTime = 0
+  audio.play()
 }
 
 loadBlock()
